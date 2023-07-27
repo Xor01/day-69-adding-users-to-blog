@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
-from forms import CreatePostForm
+from forms import CreatePostForm, RegisterForm, LoginForm
 from flask_gravatar import Gravatar
 from dotenv import load_dotenv
 from os import getenv
@@ -16,11 +16,17 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = getenv('SECRET_KEY')
 ckeditor = CKEditor(app)
 Bootstrap(app)
-
+login_manager = LoginManager()
+login_manager.init_app(app=app)
 ## CONNECT TO DB
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+
+@login_manager.user_loader
+def user_loder(user_id):
+    return User.query.get(user_id)
 
 
 ## CONFIGURE TABLES
@@ -36,7 +42,16 @@ class BlogPost(db.Model):
     img_url = db.Column(db.String(250), nullable=False)
 
 
-db.create_all()
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(100))
+    name = db.Column(db.String(100))
+
+
+with app.app_context():
+    db.create_all()
 
 
 @app.route('/')
@@ -45,14 +60,30 @@ def get_all_posts():
     return render_template("index.html", all_posts=posts)
 
 
-@app.route('/register')
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    return render_template("register.html")
+    form = RegisterForm()
+    if form.validate_on_submit():
+        is_user_exist = db.session.execute(db.select(User).where(User.email == form.email.data)).scalar()
+        if is_user_exist:
+            print('user exist')
+            flash('An account is registered with this email')
+            return redirect(url_for('login'))
+        user = User()
+        user.name = form.name.data
+        user.email = form.email.data
+        user.password = generate_password_hash(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        login_user(user)
+        return redirect(url_for('get_all_posts'))
+    return render_template("register.html", form=form)
 
 
 @app.route('/login')
 def login():
-    return render_template("login.html")
+    form = LoginForm()
+    return render_template("login.html", form=form)
 
 
 @app.route('/logout')
