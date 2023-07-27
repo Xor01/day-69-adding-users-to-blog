@@ -48,6 +48,7 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(100))
     name = db.Column(db.String(100))
     posts = relationship('BlogPost', back_populates='author')
+    comments = relationship('Comment', back_populates='author')
 
 
 class BlogPost(db.Model):
@@ -60,6 +61,18 @@ class BlogPost(db.Model):
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
+
+    comments = relationship('Comment', back_populates='parent_post')
+
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    author = relationship('User', back_populates='comments')
+    post_id = db.Column(db.Integer, db.ForeignKey('blog_posts.id'))
+    parent_post = relationship('BlogPost', back_populates='comments')
 
 
 with app.app_context():
@@ -118,11 +131,25 @@ def logout():
     return redirect(url_for('get_all_posts'))
 
 
-@app.route("/post/<int:post_id>")
+@app.route("/post/<int:post_id>", methods=['GET', 'POST'])
 def show_post(post_id):
     requested_post = BlogPost.query.get(post_id)
+    comments = Comment.query.filter_by(post_id=post_id).all()
     form = CommentForm()
-    return render_template("post.html", post=requested_post, logged_in=current_user.is_authenticated, form=form)
+    if form.validate_on_submit():
+        if not current_user.is_authenticated:
+            flash('You need to login to comment')
+            return redirect(url_for('login'))
+        comment = Comment()
+        comment.author = current_user
+        comment.text = form.comment_body.data
+        comment.post_id = post_id
+        comment.parent_post = requested_post
+        db.session.add(comment)
+        db.session.commit()
+        return redirect(url_for('show_post', post_id=post_id))
+    return render_template("post.html", post=requested_post,
+                           logged_in=current_user.is_authenticated, form=form, comments=comments)
 
 
 @app.route("/about")
