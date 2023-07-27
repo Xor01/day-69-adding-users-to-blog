@@ -23,6 +23,14 @@ login_manager.init_app(app=app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+Gravatar(app,
+         size=200,
+         rating='g',
+         default='retro',
+         force_default=False,
+         force_lower=True,
+         use_ssl=True,
+         base_url=None)
 
 
 @login_manager.user_loader
@@ -134,6 +142,8 @@ def logout():
 @app.route("/post/<int:post_id>", methods=['GET', 'POST'])
 def show_post(post_id):
     requested_post = BlogPost.query.get(post_id)
+    if not requested_post:
+        abort(404)
     comments = Comment.query.filter_by(post_id=post_id).all()
     form = CommentForm()
     if form.validate_on_submit():
@@ -185,6 +195,10 @@ def add_new_post():
 @is_admin
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
+    if not post:
+        abort(404)
+    if post.author != current_user:
+        abort(403)
     edit_form = CreatePostForm(
         title=post.title,
         subtitle=post.subtitle,
@@ -208,6 +222,10 @@ def edit_post(post_id):
 @is_admin
 def delete_post(post_id):
     post_to_delete = BlogPost.query.get(post_id)
+    if not post_to_delete:
+        abort(404)
+    if post_to_delete.author != current_user:
+        abort(403)
     db.session.delete(post_to_delete)
     db.session.commit()
     return redirect(url_for('get_all_posts'))
