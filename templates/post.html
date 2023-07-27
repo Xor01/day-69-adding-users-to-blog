@@ -1,5 +1,5 @@
 {% include "header.html" %}
-
+{% import "bootstrap/wtf.html" as wtf %}
   <!-- Page Header -->
   <header class="masthead" style="background-image: url('{{post.img_url}}')">
     <div class="overlay"></div>
@@ -33,6 +33,10 @@
 
 
 <!--           Comments Area -->
+            {% if logged_in %}
+            {{ wtf.quick_form(form, novalidate=True, button_map={"submit": "primary"}) }}
+            {{ ckeditor.load() }}
+            {% endif %}
           <div class="col-lg-8 col-md-10 mx-auto comment">
               <ul class="commentList">
                 <li>
@@ -45,7 +49,7 @@
                     </div>
                 </li>
               </ul>
-            </div>
+          </div>
 
 
           </div>
