@@ -1,4 +1,5 @@
-from flask import Flask, render_template, redirect, url_for, flash
+from functools import wraps
+from flask import Flask, render_template, redirect, url_for, flash, abort
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
@@ -27,6 +28,15 @@ db = SQLAlchemy(app)
 @login_manager.user_loader
 def user_loder(user_id):
     return User.query.get(user_id)
+
+
+def is_admin(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if current_user.is_authenticated and current_user.id == 1:
+            return func(*args, **kwargs)
+        return abort(401)
+    return wrapper
 
 
 ## CONFIGURE TABLES
@@ -122,7 +132,8 @@ def contact():
     return render_template("contact.html", logged_in=current_user.is_authenticated)
 
 
-@app.route("/new-post")
+@app.route("/new-post", methods=['GET', 'POST'])
+@is_admin
 def add_new_post():
     form = CreatePostForm()
     if form.validate_on_submit():
@@ -131,7 +142,7 @@ def add_new_post():
             subtitle=form.subtitle.data,
             body=form.body.data,
             img_url=form.img_url.data,
-            author=current_user,
+            author=current_user.name,
             date=date.today().strftime("%B %d, %Y")
         )
         db.session.add(new_post)
@@ -140,7 +151,8 @@ def add_new_post():
     return render_template("make-post.html", form=form, logged_in=current_user.is_authenticated)
 
 
-@app.route("/edit-post/<int:post_id>")
+@app.route("/edit-post/<int:post_id>", methods=['GET', 'POST'])
+@is_admin
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
     edit_form = CreatePostForm(
@@ -154,7 +166,7 @@ def edit_post(post_id):
         post.title = edit_form.title.data
         post.subtitle = edit_form.subtitle.data
         post.img_url = edit_form.img_url.data
-        post.author = edit_form.author.data
+        post.author = current_user.name
         post.body = edit_form.body.data
         db.session.commit()
         return redirect(url_for("show_post", post_id=post.id))
@@ -163,6 +175,7 @@ def edit_post(post_id):
 
 
 @app.route("/delete/<int:post_id>")
+@is_admin
 def delete_post(post_id):
     post_to_delete = BlogPost.query.get(post_id)
     db.session.delete(post_to_delete)
