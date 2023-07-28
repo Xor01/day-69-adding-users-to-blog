@@ -11,15 +11,21 @@ from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 from flask_gravatar import Gravatar
 from os import getenv
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = getenv('SECRET_KEY')
+
+def create_app():
+    created_app = Flask(__name__)
+    created_app.config['SECRET_KEY'] = getenv('SECRET_KEY')
+    ## CONNECT TO DB
+    created_app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DB_URL')
+    created_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    return created_app
+
+
+app = create_app()
 ckeditor = CKEditor(app)
 Bootstrap(app)
 login_manager = LoginManager()
 login_manager.init_app(app=app)
-## CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DB_URL')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 Gravatar(app,
          size=200,
