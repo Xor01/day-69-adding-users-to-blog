@@ -11,21 +11,15 @@ from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 from flask_gravatar import Gravatar
 from os import getenv
 
-
-def create_app():
-    created_app = Flask(__name__)
-    created_app.config['SECRET_KEY'] = getenv('SECRET_KEY')
-    ## CONNECT TO DB
-    created_app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DB_URL')
-    created_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    return created_app
-
-
-app = create_app()
+app = Flask(__name__)
+app.config['SECRET_KEY'] = getenv('SECRET_KEY')
 ckeditor = CKEditor(app)
 Bootstrap(app)
 login_manager = LoginManager()
 login_manager.init_app(app=app)
+## CONNECT TO DB
+app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DB_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 Gravatar(app,
          size=200,
@@ -57,7 +51,7 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(105))
+    password = db.Column(db.String(100))
     name = db.Column(db.String(100))
     posts = relationship('BlogPost', back_populates='author')
     comments = relationship('Comment', back_populates='author')
@@ -236,4 +230,4 @@ def delete_post(post_id):
 
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0', port=5000)
