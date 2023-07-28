@@ -20,7 +20,7 @@ Bootstrap(app)
 login_manager = LoginManager()
 login_manager.init_app(app=app)
 ## CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DB_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 Gravatar(app,
@@ -53,7 +53,7 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(100))
+    password = db.Column(db.String(105))
     name = db.Column(db.String(100))
     posts = relationship('BlogPost', back_populates='author')
     comments = relationship('Comment', back_populates='author')
